@@ -1,4 +1,5 @@
-name: Deploy to Kubernetes
+name: Deploy Business Logo Designn
+
 on:
   push:
     branches:
@@ -9,88 +10,58 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: checkout
-        uses: actions/checkout@v4
+    - name: Checkout Code
+      uses: actions/checkout@v3
 
-      - name: Setting SSH Connection with machine  
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{secrets.SSH_PRIVATE_KEY_worker}}
+    - name: Set up SSH Agent
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.CICD_SSH_KEY }}
 
-      - name: making git safe repository
-        run: |
-         ssh -o StrictHostKeyChecking=no ubuntu@${{secrets.public_IP_worker}} << EOF
-         git config --global --add safe.directory /home/ubuntu/businesslogodesign.us 
-         EOF
-        #  yhn pr directory aae gi 
-
-      - name: Pull updated Code From Github
-        run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@${{secrets.public_IP_worker}} << EOF
-          cd /home/ubuntu/businesslogodesign.us
+    - name: Deploy Application
+      run: |
+        ssh -o StrictHostKeyChecking=no ubuntu@ec2-54-255-22-223.ap-southeast-1.compute.amazonaws.com << 'EOF'
+          sudo su -
           set -e
+
+          # Go to deployment directory
+          cd /var/www/html/cicd-main2
+
+          git config --global --add safe.directory /var/www/html/cicd-main2
+
+          # Save last successful commit
+          LAST_COMMIT=$(git rev-parse HEAD)
+          echo $LAST_COMMIT > .last_commit
+
+          # Pull latest code
           git checkout main
-          git pull origin main
-          EOF
+          git pull origin main || {
+            echo "Deployment failed, rolling back..."
+            git reset --hard $(cat .last_commit)
+            exit 1
+          }
 
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}  
+          # Set ownership for Apache
+          sudo chown -R www-data:www-data /var/www/html/cicd-main2
 
-      - name: Build Docker File and upload it to Docker hub
-        run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@${{secrets.public_IP_worker}} "
-           cd /home/ubuntu/businesslogodesign.us
-           sudo docker build -t faizanvoxtron/businesslogodesign:latest .
-           sudo docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
-           sudo docker push faizanvoxtron/businesslogodesign:latest
-          " 
-      - name: Setting SSH Connection with Master-Node  
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-            ssh-private-key: ${{secrets.SSH_PRIVATE_KEY_Master}}
-  
+          # Optional: restart Apache
+          # systemctl restart apache2
+        EOF
 
-      - name: Apply Kubernetes Configurations
-        run: |
-            ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.public_IP_Master}} << "
-             cd /home/ubuntu/businesslogodesign.us/k8s
-             kubectl rollout restart deployment businesslogodesign-web -n bld
-            "
+    - name: Send Email Notification (Gmail SMTP)
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        secure: false
+        username: shahzaibuit7@gmail.com
+        password: qunlacjigebadynn
+        subject: "Deployment Notification - Business Logo Design"
+        body: |
+          The deployment to the server has been successfully completed.
 
-      # - name: Send email notification on success
-      #   if: success()
-      #   uses: dawidd6/action-send-mail@v3
-      #   with:
-      #     server_address: smtp.yandex.com
-      #     server_port: 465
-      #     username: 
-      #     password: 
-      #     subject: "Deployment Successful"
-      #     body: |
-      #           The deployment to the server has been successfully completed.
-      #           Site URL: "elitedesignstudios.com"
-      #           Repository: ${{ github.repository }}
-      #           Branch: ${{ github.ref }}
-      #     to: ""
-      #     from: ""
-      
-      # - name: Send email notification on failure
-      #   if: failure()
-      #   uses: dawidd6/action-send-mail@v3
-      #   with:
-      #     server_address: smtp.yandex.com
-      #     server_port: 465
-      #     username: 
-      #     password: 
-      #     subject: "Deployment Failed - Rollback Executed"
-      #     body: |
-      #           The deployment to the server has failed and a rollback has been executed.
-      #           Please check the logs for more details.
-      #           Site URL: "elitedesignstudios.com"
-      #           Repository: ${{ github.repository }}
-      #           Branch: ${{ github.ref }}
-      #     to: ""
-      #     from: ""
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref }}
+          Site URL: "https://cicd.ressenza.pk"
+        to: sshahzaibali83@gmail.com
+        from: shahzaibuit7@gmail.com
