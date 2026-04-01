@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: businesslogodesign-web
+  labels:
+    app: businesslogodesign-web
+  namespace: bld
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: businesslogodesign-web
+  template:
+    metadata:
+      labels:
+        app: businesslogodesign-web
+    spec:
+      containers:
+        - name: businesslogodesign-web
+          image: voxtrondocker/businesslogodesign:latest
+          ports:
+            - containerPort: 80
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: "100m"   # 0.1 core
+              memory: "256Mi"  # 256MB
+            limits:
+              cpu: "500m"   # 0.5 core
+              memory: "1Gi"  # 1GB
+          volumeMounts:
+            - name: businesslogodesign-volume
+              mountPath: /var/www/html
+      volumes:
+        - name: businesslogodesign-volume
+          persistentVolumeClaim:
+            claimName: bld-pvc

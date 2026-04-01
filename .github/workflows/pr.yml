@@ -1,0 +1,61 @@
+name: Create Pull Request and Notify
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+jobs:
+  auto-pull-request:
+    name: PullRequestAction
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Create Pull Request
+        id: create_pr
+        uses: diillson/auto-pull-request@v1.0.1
+        with:
+          destination_branch: "main"
+          pr_title: "Pulling ${{ github.ref_name }} into main"
+          pr_body: |
+            👑 Automated Pull Request
+
+            Source Branch: `${{ github.ref_name }}`
+            Target Branch: `main`
+
+            This PR was created automatically.
+          pr_label: "auto-pr"
+          pr_allow_empty: true
+          github_token: ${{ secrets.TOKEN }}
+
+      - name: Get Repository Info
+        id: repo_info
+        run: |
+          echo "repo=${GITHUB_REPOSITORY}" >> $GITHUB_OUTPUT
+
+      - name: Send Email Notification (Gmail SMTP)
+        if: steps.create_pr.outputs.pull-request-number != ''
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          secure: false
+          username: hamzashaikhali20@gmail.com
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "Approval required for Pull Request #${{ steps.create_pr.outputs.pull-request-number }}"
+          body: |
+            A new Pull Request has been created.
+
+            Repository: ${{ steps.repo_info.outputs.repo }}
+            Branch: ${{ github.ref_name }}
+            PR Number: #${{ steps.create_pr.outputs.pull-request-number }}
+
+            Review & approve here:
+            https://github.com/${{ steps.repo_info.outputs.repo }}/pull/${{ steps.create_pr.outputs.pull-request-number }}
+          to: hamza.ali@voxtrongroup.com
+          from: hamzashaikhali20@gmail.com

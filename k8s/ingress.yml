@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: businesslogodesign-web
+  namespace: bld
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: businesslogodesign.us
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: businesslogodesign-web
+                port:
+                  number: 8085
+    - host: www.businesslogodesign.us  # <-- Add this
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: businesslogodesign-web
+                port:
+                  number: 8085
