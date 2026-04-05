@@ -1,4 +1,4 @@
-name: Deploy Business Logo Designn (updated on 02-apr-2026 at 03:40 pm)
+name: Deploy Business Logo Designn (updated on 05-Apr-2026)
 
 on:
   push:
@@ -20,7 +20,7 @@ jobs:
 
     - name: Deploy Application
       run: |
-        ssh -o StrictHostKeyChecking=no ubuntu@ec2-54-255-22-223.ap-southeast-1.compute.amazonaws.com << 'EOF'
+        ssh -o StrictHostKeyChecking=no ubuntu@ec2-47-130-249-52.ap-southeast-1.compute.amazonaws.com << 'EOF'
           sudo su -
           set -e
 
